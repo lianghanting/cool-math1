@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>量一量 - 探究四边形的内角和</title>
+    <style>
+        :root {
+            --bg: #f5f0e8;
+            --panel-bg: #ffffff;
+            --text: #333;
+            --accent: #e8734a;
+            --accent2: #3b82f6;
+            --success: #10b981;
+            --border: #e0d8cc;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --radius: 16px;
+            --font-title: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            font-family: var(--font-title);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 16px;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1300px;
+            height: 90vh;
+            max-height: 820px;
+            align-items: stretch;
+        }
+
+        /* Canvas 面板 */
+        .canvas-panel {
+            flex: 1 1 68%;
+            background: #fdfcf9;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--border);
+            min-width: 0;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            touch-action: none;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+        canvas.grabbing {
+            cursor: grabbing;
+        }
+        canvas.rotating {
+            cursor: move;
+        }
+
+        /* 提示标签 */
+        .hint-tag {
+            position: absolute;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border: 1.5px solid #d0c8b8;
+            border-radius: 20px;
+            padding: 6px 18px;
+            font-size: 13px;
+            color: #7a6e5d;
+            pointer-events: none;
+            letter-spacing: 0.5px;
+            transition: opacity 0.4s;
+            z-index: 5;
+        }
+
+        /* 右侧面板 */
+        .side-panel {
+            flex: 0 0 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 280px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px 20px;
+            border: 1.5px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #4a3f35;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.5px;
+        }
+        .card-title .icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+        .icon-protractor {
+            background: #fef3c7;
+        }
+        .icon-table {
+            background: #dbeafe;
+        }
+
+        /* 实时读数 */
+        .live-reading {
+            text-align: center;
+            padding: 10px 0;
+        }
+        .live-reading .angle-value {
+            font-size: 52px;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+            letter-spacing: -1px;
+            transition: color 0.3s;
+        }
+        .live-reading .angle-value.inactive {
+            color: #c5beb2;
+        }
+        .live-reading .angle-label {
+            font-size: 13px;
+            color: #9a8e7f;
+            margin-top: 2px;
+        }
+        .live-reading .vertex-indicator {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+        .vertex-a {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .vertex-b {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .vertex-c {
+            background: #d1fae5;
+            color: #047857;
+        }
+        .vertex-d {
+            background: #fff7ed;
+            color: #c2410c;
+        }
+        .vertex-none {
+            background: #f3f0eb;
+            color: #b0a694;
+        }
+
+        /* 按钮 */
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1.5px solid #d0c8b8;
+            background: #fdfcf9;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            font-family: inherit;
+            color: #4a3f35;
+            white-space: nowrap;
+            text-align: center;
+        }
+        .btn:active {
+            transform: scale(0.95);
+            background: #f0ebe0;
+        }
+        .btn.primary {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            font-weight: 700;
+        }
+        .btn.primary:active {
+            background: #d4653a;
+            border-color: #d4653a;
+        }
+        .btn.secondary {
+            background: var(--accent2);
+            color: #fff;
+            border-color: var(--accent2);
+        }
+        .btn.secondary:active {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        .btn:disabled {
+            opacity: 0.45;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
+        /* 表格 */
+        .angle-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+        .angle-table th,
+        .angle-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid #e8e1d5;
+            letter-spacing: 0.5px;
+        }
+        .angle-table th {
+            font-weight: 700;
+            color: #6b5f4f;
+            font-size: 13px;
+            background: #faf7f0;
+        }
+        .angle-table .angle-cell {
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: 0;
+        }
+        .angle-table .angle-cell.recorded {
+            color: #1a1a1a;
+        }
+        .angle-table .angle-cell.empty {
+            color: #c5beb2;
+            font-weight: 400;
+            font-size: 14px;
+        }
+        .angle-table .sum-row td {
+            font-weight: 800;
+            font-size: 17px;
+            border-top: 2.5px solid #4a3f35;
+            border-bottom: none;
+            padding-top: 12px;
+        }
+        .sum-row .sum-value {
+            color: var(--accent);
+            font-size: 20px;
+        }
+        .sum-row .sum-value.perfect {
+            color: #10b981;
+            animation: popIn 0.5s ease;
+        }
+        @keyframes popIn {
+            0% {
+                transform: scale(1.3);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        .dot-indicator {
+            display: inline-block;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+            position: relative;
+            top: -1px;
+        }
+        .dot-a {
+            background: #ef4444;
+        }
+        .dot-b {
+            background: #3b82f6;
+        }
+        .dot-c {
+            background: #10b981;
+        }
+        .dot-d {
+            background: #f97316;
+        }
+
+        /* 响应式 */
+        @media (max-width: 900px) {
+            .app-container {
+                flex-direction: column;
+                height: auto;
+                max-height: none;
+            }
+            .canvas-panel {
+                flex: 0 0 55vh;
+                min-height: 380px;
+            }
+            .side-panel {
+                flex: 0 0 auto;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .side-panel .card {
+                flex: 1 1 45%;
+                min-width: 160px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Canvas 面板 -->
+        <div class="canvas-panel" id="canvasPanel">
+            <canvas id="mainCanvas"></canvas>
+            <div class="hint-tag" id="hintTag">👆 拖动量角器 · 双指缩放旋转 · 靠近顶点自动吸附</div>
+        </div>
+
+        <!-- 侧边栏 -->
+        <div class="side-panel">
+            <!-- 实时读数 -->
+            <div class="card" style="text-align:center;">
+                <div class="card-title">
+                    <span class="icon icon-protractor">📐</span> 当前读数
+                </div>
+                <div class="live-reading">
+                    <div class="angle-value inactive" id="liveAngle">--°</div>
+                    <div class="angle-label">当前测量角度</div>
+                    <div class="vertex-indicator vertex-none" id="vertexIndicator">未吸附顶点</div>
+                </div>
+                <div class="btn-row" style="margin-top:8px;">
+                    <button class="btn primary" id="btnRecord" disabled>📝 记录角度</button>
+                </div>
+            </div>
+
+            <!-- 记录表格 -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon icon-table">📋</span> 角度记录表
+                </div>
+                <table class="angle-table">
+                    <thead>
+                        <tr>
+                            <th>角的顶点</th>
+                            <th>度数</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="dot-indicator dot-a"></span>角A</td>
+                            <td class="angle-cell empty" id="cellA">未记录</td>
+                            <td id="statusA" style="font-size:12px;color:#c5beb2;">⏳</td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot-indicator dot-b"></span>角B</td>
+                            <td class="angle-cell empty" id="cellB">未记录</td>
+                            <td id="statusB" style="font-size:12px;color:#c5beb2;">⏳</td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot-indicator dot-c"></span>角C</td>
+                            <td class="angle-cell empty" id="cellC">未记录</td>
+                            <td id="statusC" style="font-size:12px;color:#c5beb2;">⏳</td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot-indicator dot-d"></span>角D</td>
+                            <td class="angle-cell empty" id="cellD">未记录</td>
+                            <td id="statusD" style="font-size:12px;color:#c5beb2;">⏳</td>
+                        </tr>
+                        <tr class="sum-row">
+                            <td>🔶 总和</td>
+                            <td class="sum-value" id="sumValue">--°</td>
+                            <td id="sumStatus"></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="btn-row" style="margin-top:12px;">
+                    <button class="btn secondary" id="btnClear">🔄 清除记录</button>
+                    <button class="btn" id="btnNewShape">🎲 新四边形</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ==================== DOM元素 ====================
+            const canvas = document.getElementById('mainCanvas');
+            const ctx = canvas.getContext('2d');
+            const canvasPanel = document.getElementById('canvasPanel');
+            const hintTag = document.getElementById('hintTag');
+            const liveAngleEl = document.getElementById('liveAngle');
+            const vertexIndicator = document.getElementById('vertexIndicator');
+            const btnRecord = document.getElementById('btnRecord');
+            const btnClear = document.getElementById('btnClear');
+            const btnNewShape = document.getElementById('btnNewShape');
+
+            // ==================== 状态变量 ====================
+            // 四边形顶点（逆时针排列）
+            let quadVertices = []; // [{x, y, label}]
+            const vertexLabels = ['A', 'B', 'C', 'D'];
+            const vertexColors = ['#ef4444', '#3b82f6', '#10b981', '#f97316'];
+            const vertexColorNames = ['dot-a', 'dot-b', 'dot-c', 'dot-d'];
+            const vertexClasses = ['vertex-a', 'vertex-b', 'vertex-c', 'vertex-d'];
+
+            // 量角器状态
+            let protractor = {
+                centerX: 0,
+                centerY: 0,
+                rotation: 0, // 弧度，0刻度线方向（0=水平向右）
+                scale: 1.0,
+                radius: 110, // 基础半径（px，在scale=1时）
+            };
+
+            // 吸附状态
+            let snapState = {
+                snappedVertexIndex: -1, // 吸附到的顶点索引（-1表示未吸附）
+                snappedEdgeIndex: -1, // 吸附到的边索引（相对于该顶点，0或1，-1表示未吸附）
+                measuredAngle: null, // 当前测量的角度（度）
+            };
+
+            // 记录的角度
+            let recordedAngles = [null, null, null, null]; // A,B,C,D
+
+            // 交互状态
+            let isDragging = false;
+            let isTwoFinger = false;
+            let dragStartPos = { x: 0, y: 0 };
+            let dragStartCenter = { x: 0, y: 0 };
+            let dragStartRotation = 0;
+            let twoFingerStart = {
+                dist: 0,
+                angle: 0,
+                centerX: 0,
+                centerY: 0,
+                scale: 1,
+                rotation: 0,
+                protractorCenterX: 0,
+                protractorCenterY: 0,
+            };
+            let pointerId1 = null;
+            let pointerId2 = null;
+            let pointer1Pos = null;
+            let pointer2Pos = null;
+            let lastSinglePointerTime = 0;
+
+            // 提示自动消失
+            let hintTimeout = null;
+
+            // ==================== Canvas 尺寸管理 ====================
+            function resizeCanvas() {
+                const rect = canvasPanel.getBoundingClientRect();
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                const w = rect.width;
+                const h = rect.height;
+                if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+                    canvas.width = w * dpr;
+                    canvas.height = h * dpr;
+                    canvas.style.width = w + 'px';
+                    canvas.style.height = h + 'px';
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx.scale(dpr, dpr);
+                }
+                return { w, h };
+            }
+
+            function getCanvasSize() {
+                return {
+                    w: canvas.width / (Math.min(window.devicePixelRatio || 1, 2)),
+                    h: canvas.height / (Math.min(window.devicePixelRatio || 1, 2)),
+                };
+            }
+
+            // ==================== 四边形生成 ====================
+            function generateConvexQuadrilateral() {
+                const { w, h } = getCanvasSize();
+                const cx = w * 0.48;
+                const cy = h * 0.48;
+                const baseRadius = Math.min(w, h) * 0.28;
+                const angles = [];
+                // 生成4个随机角度并排序
+                for (let i = 0; i < 4; i++) {
+                    angles.push(Math.random() * Math.PI * 2);
+                }
+                angles.sort((a, b) => a - b);
+                // 确保角度分布合理（最小间隔30度）
+                const minGap = (30 * Math.PI) / 180;
+                let attempts = 0;
+                while (attempts < 20) {
+                    let valid = true;
+                    for (let i = 0; i < 4; i++) {
+                        const next = (i + 1) % 4;
+                        let gap = angles[next] - angles[i];
+                        if (gap < 0) gap += Math.PI * 2;
+                        if (gap < minGap) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if (valid) break;
+                    // 重新生成
+                    for (let i = 0; i < 4; i++) {
+                        angles[i] = Math.random() * Math.PI * 2;
+                    }
+                    angles.sort((a, b) => a - b);
+                    attempts++;
+                }
+                // 生成顶点
+                const vertices = angles.map((angle, i) => {
+                    const r = baseRadius * (0.7 + Math.random() * 0.6);
+                    return {
+                        x: cx + r * Math.cos(angle),
+                        y: cy + r * Math.sin(angle),
+                        label: vertexLabels[i],
+                        color: vertexColors[i],
+                    };
+                });
+                return vertices;
+            }
+
+            // ==================== 初始化量角器位置 ====================
+            function initProtractorPosition() {
+                const { w, h } = getCanvasSize();
+                protractor.centerX = w * 0.65;
+                protractor.centerY = h * 0.35;
+                protractor.rotation = 0;
+                protractor.scale = 1.0;
+                protractor.radius = Math.min(w, h) * 0.14;
+            }
+
+            // ==================== 几何工具函数 ====================
+            function distance(x1, y1, x2, y2) {
+                return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+            }
+
+            function angleBetween(x1, y1, x2, y2) {
+                return Math.atan2(y2 - y1, x2 - x1);
+            }
+
+            function normalizeAngle(angle) {
+                while (angle < 0) angle += Math.PI * 2;
+                while (angle >= Math.PI * 2) angle -= Math.PI * 2;
+                return angle;
+            }
+
+            function angleDiff(a, b) {
+                let diff = normalizeAngle(a) - normalizeAngle(b);
+                if (diff > Math.PI) diff -= Math.PI * 2;
+                if (diff < -Math.PI) diff += Math.PI * 2;
+                return diff;
+            }
+
+            function radToDeg(rad) {
+                return rad * 180 / Math.PI;
+            }
+
+            function degToRad(deg) {
+                return deg * Math.PI / 180;
+            }
+
+            // 获取顶点在四边形中的两条边的方向
+            function getVertexEdges(vertexIndex) {
+                const n = quadVertices.length;
+                const prev = quadVertices[(vertexIndex - 1 + n) % n];
+                const curr = quadVertices[vertexIndex];
+                const next = quadVertices[(vertexIndex + 1) % n];
+                const edge1Dir = angleBetween(curr.x, curr.y, prev.x, prev.y);
+                const edge2Dir = angleBetween(curr.x, curr.y, next.x, next.y);
+                return [
+                    { dir: edge1Dir, neighborIndex: (vertexIndex - 1 + n) % n },
+                    { dir: edge2Dir, neighborIndex: (vertexIndex + 1) % n },
+                ];
+            }
+
+            // 计算顶点处的内角（度）
+            function getInteriorAngle(vertexIndex) {
+                const edges = getVertexEdges(vertexIndex);
+                let diff = angleDiff(edges[0].dir, edges[1].dir);
+                let deg = Math.abs(radToDeg(diff));
+                if (deg > 180) deg = 360 - deg;
+                return Math.round(deg);
+            }
+
+            // ==================== 吸附检测 ====================
+            const SNAP_DISTANCE_THRESHOLD = 28; // 中心吸附阈值（px）
+            const SNAP_ANGLE_THRESHOLD = 12; // 角度吸附阈值（度）
+
+            function updateSnapState() {
+                snapState.snappedVertexIndex = -1;
+                snapState.snappedEdgeIndex = -1;
+                snapState.measuredAngle = null;
+
+                // 检测中心吸附到顶点
+                let minDist = Infinity;
+                let closestVertex = -1;
+                for (let i = 0; i < quadVertices.length; i++) {
+                    const v = quadVertices[i];
+                    const d = distance(protractor.centerX, protractor.centerY, v.x, v.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        closestVertex = i;
+                    }
+                }
+                const effectiveSnapDist = SNAP_DISTANCE_THRESHOLD * protractor.scale;
+                if (minDist < effectiveSnapDist && closestVertex >= 0) {
+                    snapState.snappedVertexIndex = closestVertex;
+                    // 自动将中心移到顶点
+                    const v = quadVertices[closestVertex];
+                    protractor.centerX = v.x;
+                    protractor.centerY = v.y;
+
+                    // 检测0刻度线吸附到边
+                    const edges = getVertexEdges(closestVertex);
+                    const zeroDir = protractor.rotation;
+                    let minAngleDiff = Infinity;
+                    let closestEdge = -1;
+                    for (let j = 0; j < edges.length; j++) {
+                        const diff = Math.abs(angleDiff(edges[j].dir, zeroDir));
+                        const diffDeg = radToDeg(diff);
+                        const diffDegClamped = Math.min(diffDeg, 360 - diffDeg);
+                        // 也检查反方向（0刻度线可能与边的反向对齐）
+                        const diff2 = Math.abs(angleDiff(edges[j].dir, zeroDir + Math.PI));
+                        const diffDeg2 = Math.min(radToDeg(diff2), 360 - radToDeg(diff2));
+                        const bestDiff = Math.min(diffDegClamped, diffDeg2);
+                        if (bestDiff < minAngleDiff) {
+                            minAngleDiff = bestDiff;
+                            closestEdge = j;
+                        }
+                    }
+                    if (minAngleDiff < SNAP_ANGLE_THRESHOLD && closestEdge >= 0) {
+                        snapState.snappedEdgeIndex = closestEdge;
+                        // 自动旋转使0刻度线对齐该边
+                        const edgeDir = edges[closestEdge].dir;
+                        const diff = angleDiff(edgeDir, protractor.rotation);
+                        const diff2 = angleDiff(edgeDir, protractor.rotation + Math.PI);
+                        if (Math.abs(diff2) < Math.abs(diff)) {
+                            protractor.rotation = normalizeAngle(edgeDir);
+                        } else {
+                            protractor.rotation = normalizeAngle(edgeDir);
+                        }
+                        // 确保0刻度线与边对齐（选择使夹角最小的方向）
+                        const d1 = Math.abs(angleDiff(edgeDir, protractor.rotation));
+                        const d1deg = Math.min(radToDeg(d1), 360 - radToDeg(d1));
+                        if (d1deg > 90) {
+                            protractor.rotation = normalizeAngle(protractor.rotation + Math.PI);
+                        }
+                        // 最终微调：让0刻度线精确对齐边
+                        const finalDiff = angleDiff(edgeDir, protractor.rotation);
+                        const finalDiffDeg = Math.min(radToDeg(Math.abs(finalDiff)), 360 - radToDeg(Math.abs(
+                            finalDiff)));
+                        if (finalDiffDeg <= SNAP_ANGLE_THRESHOLD) {
+                            protractor.rotation = normalizeAngle(edgeDir);
+                        }
+                    }
+
+                    // 计算测量角度
+                    if (snapState.snappedEdgeIndex >= 0) {
+                        const edges2 = getVertexEdges(closestVertex);
+                        const otherEdgeIndex = 1 - snapState.snappedEdgeIndex;
+                        const otherEdgeDir = edges2[otherEdgeIndex].dir;
+                        const zeroDir = protractor.rotation;
+                        let angleDeg = radToDeg(angleDiff(otherEdgeDir, zeroDir));
+                        if (angleDeg < 0) angleDeg += 360;
+                        if (angleDeg > 180) angleDeg = 360 - angleDeg;
+                        angleDeg = Math.abs(angleDeg);
+                        angleDeg = Math.round(angleDeg);
+                        if (angleDeg > 180) angleDeg = 360 - angleDeg;
+                        if (angleDeg < 0) angleDeg = Math.abs(angleDeg);
+                        // 确保在0-180范围内
+                        angleDeg = Math.max(0, Math.min(180, angleDeg));
+                        snapState.measuredAngle = angleDeg;
+                    } else {
+                        // 中心吸附但边未吸附，显示两个可能的角度
+                        const edges3 = getVertexEdges(closestVertex);
+                        const zeroDir = protractor.rotation;
+                        let angleDeg0 = radToDeg(angleDiff(edges3[0].dir, zeroDir));
+                        let angleDeg1 = radToDeg(angleDiff(edges3[1].dir, zeroDir));
+                        angleDeg0 = Math.abs(angleDeg0);
+                        angleDeg1 = Math.abs(angleDeg1);
+                        if (angleDeg0 > 180) angleDeg0 = 360 - angleDeg0;
+                        if (angleDeg1 > 180) angleDeg1 = 360 - angleDeg1;
+                        // 取合理的那个（更接近内角的值）
+                        const interiorAngle = getInteriorAngle(closestVertex);
+                        const diff0 = Math.abs(angleDeg0 - interiorAngle);
+                        const diff1 = Math.abs(angleDeg1 - interiorAngle);
+                        snapState.measuredAngle = Math.round(diff0 < diff1 ? angleDeg0 : angleDeg1);
+                    }
+                }
+            }
+
+            // ==================== 绘制函数 ====================
+            function drawQuadrilateral() {
+                if (quadVertices.length < 4) return;
+
+                // 绘制填充（半透明）
+                ctx.beginPath();
+                ctx.moveTo(quadVertices[0].x, quadVertices[0].y);
+                for (let i = 1; i < quadVertices.length; i++) {
+                    ctx.lineTo(quadVertices[i].x, quadVertices[i].y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(255, 245, 230, 0.45)';
+                ctx.fill();
+                ctx.strokeStyle = '#b8a590';
+                ctx.lineWidth = 3;
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+
+                // 绘制顶点
+                for (let i = 0; i < quadVertices.length; i++) {
+                    const v = quadVertices[i];
+                    const isSnapped = snapState.snappedVertexIndex === i;
+
+                    // 光晕（吸附时）
+                    if (isSnapped) {
+                        ctx.beginPath();
+                        ctx.arc(v.x, v.y, 16, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 200, 60, 0.35)';
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(v.x, v.y, 22, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(255, 160, 30, 0.55)';
+                        ctx.lineWidth = 2.5;
+                        ctx.setLineDash([4, 3]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+
+                    // 顶点圆
+                    ctx.beginPath();
+                    ctx.arc(v.x, v.y, isSnapped ? 11 : 8, 0, Math.PI * 2);
+                    ctx.fillStyle = v.color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+                    if (isSnapped) {
+                        ctx.beginPath();
+                        ctx.arc(v.x, v.y, 13, 0, Math.PI * 2);
+                        ctx.strokeStyle = v.color;
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
+
+                    // 标签
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.font = 'bold 17px "PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const labelOffsetDist = 22;
+                    const labelAngle = angleBetween(
+                        quadVertices[(i + 2) % 4].x,
+                        quadVertices[(i + 2) % 4].y,
+                        v.x,
+                        v.y
+                    );
+                    const lx = v.x + labelOffsetDist * Math.cos(labelAngle);
+                    const ly = v.y + labelOffsetDist * Math.sin(labelAngle);
+                    // 背景
+                    const textWidth = ctx.measureText(v.label).width;
+                    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                    ctx.fillRect(lx - textWidth / 2 - 6, ly - 10, textWidth + 12, 20);
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.fillText(v.label, lx, ly);
+                }
+
+                // 高亮吸附的边
+                if (snapState.snappedVertexIndex >= 0 && snapState.snappedEdgeIndex >= 0) {
+                    const vi = snapState.snappedVertexIndex;
+                    const edges = getVertexEdges(vi);
+                    const ei = snapState.snappedEdgeIndex;
+                    const neighborIdx = edges[ei].neighborIndex;
+                    const v1 = quadVertices[vi];
+                    const v2 = quadVertices[neighborIdx];
+                    ctx.beginPath();
+                    ctx.moveTo(v1.x, v1.y);
+                    ctx.lineTo(v2.x, v2.y);
+                    ctx.strokeStyle = 'rgba(255,140,30,0.7)';
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                    ctx.strokeStyle = 'rgba(255,200,100,0.5)';
+                    ctx.lineWidth = 9;
+                    ctx.globalAlpha = 0.4;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+            }
+
+            function drawProtractor() {
+                const cx = protractor.centerX;
+                const cy = protractor.centerY;
+                const rot = protractor.rotation;
+                const scale = protractor.scale;
+                const R = protractor.radius * scale;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(rot);
+                ctx.scale(scale, scale);
+                const baseR = protractor.radius;
+
+                // 半透明底色（极淡，保持透明感）
+                ctx.beginPath();
+                ctx.arc(0, 0, baseR, 0, Math.PI);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(255,255,252,0.25)';
+                ctx.fill();
+
+                // 底边直径线
+                ctx.beginPath();
+                ctx.moveTo(-baseR, 0);
+                ctx.lineTo(baseR, 0);
+                ctx.strokeStyle = 'rgba(80,60,40,0.6)';
+                ctx.lineWidth = 1.8;
+                ctx.setLineDash([]);
+                ctx.stroke();
+
+                // 0刻度标记（右侧）
+                ctx.fillStyle = 'rgba(200,60,30,0.9)';
+                ctx.font = 'bold 11px "PingFang SC","Microsoft YaHei",sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText('0', baseR - 1, 4);
+
+                // 180刻度标记（左侧）
+                ctx.fillText('180', -baseR + 1, 4);
+
+                // 绘制弧线
+                ctx.beginPath();
+                ctx.arc(0, 0, baseR, Math.PI, 0);
+                ctx.strokeStyle = 'rgba(60,40,25,0.7)';
+                ctx.lineWidth = 2.2;
+                ctx.stroke();
+
+                // 内弧线（用于内圈刻度）
+                const innerR = baseR - 22;
+                ctx.beginPath();
+                ctx.arc(0, 0, innerR, Math.PI, 0);
+                ctx.strokeStyle = 'rgba(60,40,25,0.35)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([2, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 绘制刻度线
+                for (let deg = 0; deg <= 180; deg++) {
+                    const rad = degToRad(deg);
+                    const cosR = Math.cos(rad);
+                    const sinR = Math.sin(rad);
+                    const arcX = baseR * cosR;
+                    const arcY = -baseR * sinR;
+
+                    let tickLen;
+                    let tickWidth;
+                    if (deg % 10 === 0) {
+                        tickLen = 16;
+                        tickWidth = 2;
+                    } else if (deg % 5 === 0) {
+                        tickLen = 10;
+                        tickWidth = 1.2;
+                    } else {
+                        tickLen = 5;
+                        tickWidth = 0.6;
+                    }
+
+                    const innerX = (baseR - tickLen) * cosR;
+                    const innerY = -(baseR - tickLen) * sinR;
+
+                    ctx.beginPath();
+                    ctx.moveTo(arcX, arcY);
+                    ctx.lineTo(innerX, innerY);
+                    ctx.strokeStyle = deg % 10 === 0 ?
+                        'rgba(40,25,10,0.8)' :
+                        'rgba(40,25,10,0.45)';
+                    ctx.lineWidth = tickWidth;
+                    ctx.stroke();
+                }
+
+                // 绘制数字（每10度）
+                for (let deg = 0; deg <= 180; deg += 10) {
+                    const rad = degToRad(deg);
+                    const cosR = Math.cos(rad);
+                    const sinR = Math.sin(rad);
+                    // 外圈数字（靠近弧线外侧）
+                    const outerR = baseR + 1;
+                    const ox = outerR * cosR;
+                    const oy = -outerR * sinR;
+                    // 内圈数字（靠近弧线内侧）
+                    const innerLabelR = baseR - 24;
+                    const ix = innerLabelR * cosR;
+                    const iy = -innerLabelR * sinR;
+
+                    // 外圈数字：0在右，180在左
+                    const outerVal = deg;
+                    // 内圈数字：180在右，0在左
+                    const innerVal = 180 - deg;
+
+                    ctx.fillStyle = 'rgba(50,30,15,0.85)';
+                    ctx.font = 'bold 10px "PingFang SC","Microsoft YaHei",sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    // 外圈
+                    const outerTextR = baseR + 11;
+                    const otx = outerTextR * cosR;
+                    const oty = -outerTextR * sinR;
+                    if (deg > 2 && deg < 178) {
+                        ctx.fillText(String(outerVal), otx, oty);
+                    }
+
+                    // 内圈
+                    const innerTextR = baseR - 34;
+                    const itx = innerTextR * cosR;
+                    const ity = -innerTextR * sinR;
+                    if (deg > 5 && deg < 175) {
+                        ctx.fillStyle = 'rgba(80,55,30,0.7)';
+                        ctx.font = 'bold 9px "PingFang SC","Microsoft YaHei",sans-serif';
+                        ctx.fillText(String(innerVal), itx, ity);
+                    }
+                }
+
+                // 中心十字标记
+                const crossLen = 8;
+                ctx.strokeStyle = 'rgba(180,60,30,0.8)';
+                ctx.lineWidth = 1.8;
+                ctx.beginPath();
+                ctx.moveTo(0, -crossLen);
+                ctx.lineTo(0, crossLen);
+                ctx.moveTo(-crossLen, 0);
+                ctx.lineTo(crossLen, 0);
+                ctx.stroke();
+                // 中心小圆
+                ctx.beginPath();
+                ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(200,60,30,0.85)';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+
+                ctx.restore();
+
+                // 在量角器外绘制高亮弧线（显示测量的角度）
+                if (snapState.snappedVertexIndex >= 0 && snapState.snappedEdgeIndex >= 0 && snapState.measuredAngle !==
+                    null) {
+                    const measuredDeg = snapState.measuredAngle;
+                    if (measuredDeg > 0 && measuredDeg < 180) {
+                        ctx.save();
+                        ctx.translate(cx, cy);
+                        ctx.rotate(rot);
+                        ctx.scale(scale, scale);
+                        const highlightR = baseR + 5;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, highlightR, 0, -degToRad(measuredDeg), true);
+                        ctx.strokeStyle = 'rgba(255,80,40,0.85)';
+                        ctx.lineWidth = 5;
+                        ctx.lineCap = 'round';
+                        ctx.setLineDash([]);
+                        ctx.stroke();
+                        // 外层发光
+                        ctx.beginPath();
+                        ctx.arc(0, 0, highlightR, 0, -degToRad(measuredDeg), true);
+                        ctx.strokeStyle = 'rgba(255,150,80,0.5)';
+                        ctx.lineWidth = 10;
+                        ctx.stroke();
+
+                        // 在弧线末端绘制箭头标记
+                        const endRad = -degToRad(measuredDeg);
+                        const endX = (highlightR + 8) * Math.cos(endRad);
+                        const endY = (highlightR + 8) * Math.sin(endRad);
+                        ctx.beginPath();
+                        ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255,60,30,0.9)';
+                        ctx.fill();
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+
+                        ctx.restore();
+
+                        // 在量角器旁边显示大号读数
+                        const readX = cx + (baseR * scale + 40) * Math.cos(rot + degToRad(measuredDeg / 2));
+                        const readY = cy - (baseR * scale + 40) * Math.sin(rot + degToRad(measuredDeg / 2));
+                        // 调整使读数在弧线外侧
+                        const midRad = rot - degToRad(measuredDeg / 2);
+                        const labelX = cx + (baseR * scale + 55) * Math.cos(midRad);
+                        const labelY = cy + (baseR * scale + 55) * Math.sin(midRad);
+
+                        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                        const bgW = 52;
+                        const bgH = 32;
+                        ctx.fillRect(labelX - bgW / 2, labelY - bgH / 2, bgW, bgH);
+                        ctx.strokeStyle = 'rgba(255,80,40,0.8)';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(labelX - bgW / 2, labelY - bgH / 2, bgW, bgH);
+                        ctx.fillStyle = '#c0392b';
+                        ctx.font = 'bold 20px "PingFang SC","Microsoft YaHei",sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(measuredDeg + '°', labelX, labelY);
+                    }
+                }
+            }
+
+            function drawAll() {
+                const { w, h } = getCanvasSize();
+                ctx.clearRect(0, 0, w, h);
+
+                // 背景网格
+                ctx.fillStyle = '#fdfcf9';
+                ctx.fillRect(0, 0, w, h);
+                ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+                ctx.lineWidth = 1;
+                const gridSize = 30;
+                for (let x = gridSize; x < w; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, h);
+                    ctx.stroke();
+                }
+                for (let y = gridSize; y < h; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(w, y);
+                    ctx.stroke();
+                }
+
+                drawQuadrilateral();
+                drawProtractor();
+            }
+
+            // ==================== UI更新 ====================
+            function updateUI() {
+                const measuredAngle = snapState.measuredAngle;
+                const snappedVertex = snapState.snappedVertexIndex;
+
+                if (measuredAngle !== null && snappedVertex >= 0) {
+                    liveAngleEl.textContent = measuredAngle + '°';
+                    liveAngleEl.classList.remove('inactive');
+                    btnRecord.disabled = false;
+                    vertexIndicator.textContent = '吸附于角' + vertexLabels[snappedVertex];
+                    vertexIndicator.className = 'vertex-indicator ' + vertexClasses[snappedVertex];
+                } else if (snappedVertex >= 0) {
+                    liveAngleEl.textContent = '--°';
+                    liveAngleEl.classList.add('inactive');
+                    btnRecord.disabled = true;
+                    vertexIndicator.textContent = '吸附于角' + vertexLabels[snappedVertex] + '（旋转对齐边）';
+                    vertexIndicator.className = 'vertex-indicator ' + vertexClasses[snappedVertex];
+                } else {
+                    liveAngleEl.textContent = '--°';
+                    liveAngleEl.classList.add('inactive');
+                    btnRecord.disabled = true;
+                    vertexIndicator.textContent = '未吸附顶点';
+                    vertexIndicator.className = 'vertex-indicator vertex-none';
+                }
+
+                updateTable();
+            }
+
+            function updateTable() {
+                const cellIds = ['cellA', 'cellB', 'cellC', 'cellD'];
+                const statusIds = ['statusA', 'statusB', 'statusC', 'statusD'];
+                for (let i = 0; i < 4; i++) {
+                    const cell = document.getElementById(cellIds[i]);
+                    const status = document.getElementById(statusIds[i]);
+                    if (recordedAngles[i] !== null) {
+                        cell.textContent = recordedAngles[i] + '°';
+                        cell.classList.add('recorded');
+                        cell.classList.remove('empty');
+                        status.textContent = '✅';
+                        status.style.color = '#10b981';
+                    } else {
+                        cell.textContent = '未记录';
+                        cell.classList.remove('recorded');
+                        cell.classList.add('empty');
+                        status.textContent = '⏳';
+                        status.style.color = '#c5beb2';
+                    }
+                }
+
+                const sumEl = document.getElementById('sumValue');
+                const sumStatus = document.getElementById('sumStatus');
+                const allRecorded = recordedAngles.every(a => a !== null);
+                if (allRecorded) {
+                    const sum = recordedAngles.reduce((a, b) => a + b, 0);
+                    sumEl.textContent = sum + '°';
+                    sumEl.classList.add('sum-value');
+                    if (Math.abs(sum - 360) <= 2) {
+                        sumEl.classList.add('perfect');
+                        sumStatus.textContent = '🎉 非常接近360°！';
+                        sumStatus.style.color = '#10b981';
+                    } else if (Math.abs(sum - 360) <= 8) {
+                        sumEl.classList.remove('perfect');
+                        sumStatus.textContent = '👍 接近360°';
+                        sumStatus.style.color = '#f59e0b';
+                    } else {
+                        sumEl.classList.remove('perfect');
+                        sumStatus.textContent = '🤔 再检查一下';
+                        sumStatus.style.color = '#ef4444';
+                    }
+                } else {
+                    sumEl.textContent = '--°';
+                    sumEl.classList.remove('perfect');
+                    sumStatus.textContent = '';
+                }
+            }
+
+            function hideHintSoon() {
+                if (hintTimeout) clearTimeout(hintTimeout);
+                hintTimeout = setTimeout(() => {
+                    hintTag.style.opacity = '0';
+                    setTimeout(() => {
+                        hintTag.style.opacity = '1';
+                    }, 600);
+                }, 4000);
+            }
+
+            // ==================== 事件处理 ====================
+            function getCanvasPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                };
+            }
+
+            function isNearProtractorEdge(pos) {
+                const cx = protractor.centerX;
+                const cy = protractor.centerY;
+                const R = protractor.radius * protractor.scale;
+                const dist = distance(pos.x, pos.y, cx, cy);
+                return Math.abs(dist - R) < 30 && dist > R * 0.6;
+            }
+
+            function handlePointerDown(e) {
+                e.preventDefault();
+                const pos = getCanvasPos(e);
+
+                if (e.pointerType === 'touch') {
+                    if (pointerId1 === null) {
+                        pointerId1 = e.pointerId;
+                        pointer1Pos = pos;
+                        isTwoFinger = false;
+                        isDragging = true;
+                        dragStartPos = pos;
+                        dragStartCenter = { x: protractor.centerX, y: protractor.centerY };
+                        dragStartRotation = protractor.rotation;
+                        lastSinglePointerTime = Date.now();
+                    } else if (pointerId2 === null && e.pointerId !== pointerId1) {
+                        pointerId2 = e.pointerId;
+                        pointer2Pos = pos;
+                        isTwoFinger = true;
+                        isDragging = false;
+                        // 记录双指初始状态
+                        const dx = pointer1Pos.x - pointer2Pos.x;
+                        const dy = pointer1Pos.y - pointer2Pos.y;
+                        twoFingerStart.dist = Math.sqrt(dx * dx + dy * dy);
+                        twoFingerStart.angle = Math.atan2(dy, dx);
+                        twoFingerStart.centerX = (pointer1Pos.x + pointer2Pos.x) / 2;
+                        twoFingerStart.centerY = (pointer1Pos.y + pointer2Pos.y) / 2;
+                        twoFingerStart.scale = protractor.scale;
+                        twoFingerStart.rotation = protractor.rotation;
+                        twoFingerStart.protractorCenterX = protractor.centerX;
+                        twoFingerStart.protractorCenterY = protractor.centerY;
+                    }
+                } else {
+                    // 鼠标
+                    isDragging = true;
+                    isTwoFinger = false;
+                    dragStartPos = pos;
+                    dragStartCenter = { x: protractor.centerX, y: protractor.centerY };
+                    dragStartRotation = protractor.rotation;
+                    pointerId1 = 'mouse';
+                    pointer1Pos = pos;
+                }
+                canvas.classList.add('grabbing');
+                hideHintSoon();
+            }
+
+            function handlePointerMove(e) {
+                e.preventDefault();
+                const pos = getCanvasPos(e);
+
+                if (isTwoFinger) {
+                    if (e.pointerId === pointerId1) {
+                        pointer1Pos = pos;
+                    } else if (e.pointerId === pointerId2) {
+                        pointer2Pos = pos;
+                    }
+                    if (pointer1Pos && pointer2Pos) {
+                        const dx = pointer1Pos.x - pointer2Pos.x;
+                        const dy = pointer1Pos.y - pointer2Pos.y;
+                        const newDist = Math.sqrt(dx * dx + dy * dy);
+                        const newAngle = Math.atan2(dy, dx);
+                        const newCenterX = (pointer1Pos.x + pointer2Pos.x) / 2;
+                        const newCenterY = (pointer1Pos.y + pointer2Pos.y) / 2;
+
+                        // 缩放
+                        if (twoFingerStart.dist > 0 && newDist > 0) {
+                            const scaleRatio = newDist / twoFingerStart.dist;
+                            protractor.scale = Math.max(0.4, Math.min(3.5, twoFingerStart.scale * scaleRatio));
+                        }
+
+                        // 旋转
+                        let angleDelta = newAngle - twoFingerStart.angle;
+                        protractor.rotation = normalizeAngle(twoFingerStart.rotation + angleDelta);
+
+                        // 平移（双指中心移动）
+                        const centerDX = newCenterX - twoFingerStart.centerX;
+                        const centerDY = newCenterY - twoFingerStart.centerY;
+                        protractor.centerX = twoFingerStart.protractorCenterX + centerDX;
+                        protractor.centerY = twoFingerStart.protractorCenterY + centerDY;
+
+                        updateSnapState();
+                        updateUI();
+                        drawAll();
+                    }
+                } else if (isDragging && !isTwoFinger) {
+                    const dx = pos.x - dragStartPos.x;
+                    const dy = pos.y - dragStartPos.y;
+                    protractor.centerX = dragStartCenter.x + dx;
+                    protractor.centerY = dragStartCenter.y + dy;
+
+                    updateSnapState();
+                    updateUI();
+                    drawAll();
+                }
+            }
+
+            function handlePointerUp(e) {
+                e.preventDefault();
+                if (e.pointerId === pointerId1) {
+                    pointerId1 = pointerId2;
+                    pointer1Pos = pointer2Pos;
+                    pointerId2 = null;
+                    pointer2Pos = null;
+                    if (pointerId1 === null) {
+                        isTwoFinger = false;
+                        isDragging = false;
+                        canvas.classList.remove('grabbing');
+                    } else {
+                        // 从双指切换到单指
+                        isTwoFinger = false;
+                        isDragging = true;
+                        if (pointer1Pos) {
+                            dragStartPos = pointer1Pos;
+                            dragStartCenter = { x: protractor.centerX, y: protractor.centerY };
+                            dragStartRotation = protractor.rotation;
+                        }
+                    }
+                } else if (e.pointerId === pointerId2) {
+                    pointerId2 = null;
+                    pointer2Pos = null;
+                    isTwoFinger = false;
+                    if (pointerId1 !== null && pointer1Pos) {
+                        isDragging = true;
+                        dragStartPos = pointer1Pos;
+                        dragStartCenter = { x: protractor.centerX, y: protractor.centerY };
+                        dragStartRotation = protractor.rotation;
+                    } else {
+                        isDragging = false;
+                        canvas.classList.remove('grabbing');
+                    }
+                } else if (e.pointerId === 'mouse' || pointerId1 === 'mouse') {
+                    pointerId1 = null;
+                    pointer1Pos = null;
+                    isDragging = false;
+                    isTwoFinger = false;
+                    canvas.classList.remove('grabbing');
+                }
+
+                // 松手后重新检测吸附
+                updateSnapState();
+                updateUI();
+                drawAll();
+            }
+
+            function handleWheel(e) {
+                e.preventDefault();
+                const pos = getCanvasPos(e);
+
+                if (e.shiftKey) {
+                    // Shift+滚轮：缩放
+                    const zoomFactor = e.deltaY < 0 ? 1.06 : 0.94;
+                    protractor.scale = Math.max(0.4, Math.min(3.5, protractor.scale * zoomFactor));
+                } else {
+                    // 普通滚轮：旋转
+                    const rotDelta = e.deltaY * 0.005;
+                    protractor.rotation = normalizeAngle(protractor.rotation + rotDelta);
+                }
+                updateSnapState();
+                updateUI();
+                drawAll();
+                hideHintSoon();
+            }
+
+            // ==================== 按钮事件 ====================
+            btnRecord.addEventListener('click', () => {
+                if (snapState.snappedVertexIndex >= 0 && snapState.measuredAngle !== null) {
+                    const vi = snapState.snappedVertexIndex;
+                    recordedAngles[vi] = snapState.measuredAngle;
+                    updateTable();
+                    // 闪烁反馈
+                    const cellIds = ['cellA', 'cellB', 'cellC', 'cellD'];
+                    const cell = document.getElementById(cellIds[vi]);
+                    cell.style.transition = 'transform 0.15s ease';
+                    cell.style.transform = 'scale(1.25)';
+                    setTimeout(() => {
+                        cell.style.transform = 'scale(1)';
+                    }, 150);
+
+                    // 检查是否全部记录完成
+                    if (recordedAngles.every(a => a !== null)) {
+                        const sum = recordedAngles.reduce((a, b) => a + b, 0);
+                        if (Math.abs(sum - 360) <= 2) {
+                            setTimeout(() => {
+                                alert('🎉 太棒了！四个角的和是 ' + sum + '°，正好是360°！\n\n四边形的内角和等于360°。');
+                            }, 300);
+                        } else if (Math.abs(sum - 360) <= 8) {
+                            setTimeout(() => {
+                                alert('👍 很好！四个角的和是 ' + sum + '°，接近360°。\n\n四边形的内角和等于360°，你的测量已经很接近了！');
+                            }, 300);
+                        }
+                    }
+                }
+            });
+
+            btnClear.addEventListener('click', () => {
+                recordedAngles = [null, null, null, null];
+                updateTable();
+                updateUI();
+            });
+
+            btnNewShape.addEventListener('click', () => {
+                quadVertices = generateConvexQuadrilateral();
+                recordedAngles = [null, null, null, null];
+                initProtractorPosition();
+                snapState.snappedVertexIndex = -1;
+                snapState.snappedEdgeIndex = -1;
+                snapState.measuredAngle = null;
+                updateTable();
+                updateUI();
+                drawAll();
+                hintTag.style.opacity = '1';
+                if (hintTimeout) clearTimeout(hintTimeout);
+            });
+
+            // ==================== 事件绑定 ====================
+            canvas.addEventListener('pointerdown', handlePointerDown);
+            canvas.addEventListener('pointermove', handlePointerMove);
+            canvas.addEventListener('pointerup', handlePointerUp);
+            canvas.addEventListener('pointerleave', handlePointerUp);
+            canvas.addEventListener('pointercancel', handlePointerUp);
+            canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+            // 防止Canvas上的双击缩放
+            canvas.addEventListener('dblclick', (e) => e.preventDefault());
+
+            // 窗口大小变化
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                updateSnapState();
+                drawAll();
+            });
+
+            // 键盘快捷键
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') {
+                    // R键重置量角器位置
+                    initProtractorPosition();
+                    snapState.snappedVertexIndex = -1;
+                    snapState.snappedEdgeIndex = -1;
+                    snapState.measuredAngle = null;
+                    updateUI();
+                    drawAll();
+                } else if (e.key === 'n' || e.key === 'N') {
+                    btnNewShape.click();
+                } else if (e.key === ' ') {
+                    e.preventDefault();
+                    btnRecord.click();
+                }
+            });
+
+            // ==================== 初始化 ====================
+            function init() {
+                resizeCanvas();
+                quadVertices = generateConvexQuadrilateral();
+                initProtractorPosition();
+                snapState.snappedVertexIndex = -1;
+                snapState.snappedEdgeIndex = -1;
+                snapState.measuredAngle = null;
+                recordedAngles = [null, null, null, null];
+                updateTable();
+                updateUI();
+                drawAll();
+            }
+
+            init();
+
+            // ==================== 暴露API到全局 ====================
+            window.quadProtractor = {
+                reset: init,
+                getRecordedAngles: () => [...recordedAngles],
+                getSum: () => recordedAngles.every(a => a !== null) ? recordedAngles.reduce((a, b) => a + b,
+                    0) : null,
+                newShape: () => {
+                    quadVertices = generateConvexQuadrilateral();
+                    recordedAngles = [null, null, null, null];
+                    initProtractorPosition();
+                    snapState.snappedVertexIndex = -1;
+                    snapState.snappedEdgeIndex = -1;
+                    snapState.measuredAngle = null;
+                    updateTable();
+                    updateUI();
+                    drawAll();
+                },
+            };
+
+            console.log('📐 量一量 - 四边形内角和探究工具已就绪');
+            console.log('   🖐 单指拖动量角器 | ✌️ 双指缩放旋转');
+            console.log('   🎯 靠近顶点自动吸附 | 📏 靠近边自动对齐');
+            console.log('   ⌨ 快捷键: R=重置位置 N=新四边形 空格=记录角度');
+            console.log('   🖱 鼠标滚轮旋转 | Shift+滚轮缩放');
+        })();
+    </script>
+</body>
+</html>
